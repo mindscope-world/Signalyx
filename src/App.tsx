@@ -25,6 +25,16 @@ export default function App() {
   const [dashboardsList, setDashboardsList] = useState<any[]>([]);
   const [queriesList, setQueriesList] = useState<any[]>([]);
 
+  const parseContent = (content: string) => {
+    if (!content) return "No insight generated.";
+    try {
+      const parsed = JSON.parse(content);
+      return typeof parsed === 'object' ? JSON.stringify(parsed) : String(parsed);
+    } catch {
+      return String(content).replace(/^"|"$/g, '');
+    }
+  };
+
   useEffect(() => {
     // Initial fetch for demo purposes
     fetchDashboard(currentNiche);
@@ -364,11 +374,7 @@ export default function App() {
                         {insight.type.replace('_', ' ')}
                       </div>
                       <p className="text-stone-600 leading-relaxed font-medium">
-                        {insight.content 
-                           ? (typeof JSON.parse(insight.content) === 'object' 
-                                ? JSON.stringify(JSON.parse(insight.content)) 
-                                : String(JSON.parse(insight.content))) 
-                           : "No insight generated."}
+                        {parseContent(insight.content)}
                       </p>
                     </div>
                   ))}
@@ -439,7 +445,7 @@ export default function App() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {data.keywords?.sort((a: any, b: any) => b.opportunity_score - a.opportunity_score).map((kw: any, i: number) => (
+                            {[...(data.keywords || [])].sort((a: any, b: any) => (b.opportunity_score || 0) - (a.opportunity_score || 0)).map((kw: any, i: number) => (
                               <TableRow key={i} className="hover:bg-black/5 border-b-0 transition-colors">
                                 <TableCell className="font-semibold text-stone-700 py-4">{kw.keyword}</TableCell>
                                 <TableCell className="font-mono font-medium text-stone-500 py-4">{kw.search_volume?.toLocaleString()}</TableCell>

@@ -1,20 +1,59 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Signalyx
 
-# Run and deploy your AI Studio app
+> *"Type a keyword. Get a full SEO strategy."*
 
-This contains everything you need to run your app locally.
+Signalyx is an AI-powered SEO intelligence platform that transforms a single keyword into a complete growth strategy. It analyzes real-time search behavior, uncovers high-demand opportunities, maps user intent, and identifies content gaps—allowing companies to create the right content, target the right keywords, and capture market demand before competitors do.
 
-View your app in AI Studio: https://ai.studio/apps/ed36ab5d-cfd6-4623-95cb-15430fdbbba4
+## The Signalyx Difference
 
-## Run Locally
+Most SEO tools show you data. **Signalyx tells you what to do next.** 
 
-**Prerequisites:**  Node.js
+Rather than overwhelming you with spreadsheets, Signalyx acts as a unified demand intelligence layer for search-driven growth, instantly turning raw search behavior into business decisions.
 
+## Feature Modules
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+**🔍 Keyword Intelligence Engine**
+Uncover true search volume, emerging trends, and high-value long-tail opportunities.
+
+**🧠 Intent Engine**
+Automatically classify search query behavior into Informational, Commercial, or Transactional intent to target buyer readiness.
+
+**🕸️ Topic Graph Engine**
+Build semantic SEO structures including pillar pages, cohesive content clusters, and internal linking scaffolding.
+
+**📊 Competition Engine**
+Break down SERP dominance, compare domain authorities, and detect vulnerable content gaps to exploit.
+
+**📈 Opportunity Engine**
+Measure demand versus competition scoring to identify the exact keywords and topics that yield the highest ROI prioritization.
+
+**✍️ Content Engine (Powered by Groq)**
+Generate highly-optimized SEO briefs, full articles, ad copy angles, and comprehensive landing page ideas tailored to target your newly discovered keyword gaps.
+
+---
+
+## 🚀 Run Locally
+
+**Prerequisites:** 
+- Node.js (v18+)
+- A valid [Groq API Key](https://console.groq.com/keys)
+
+### 1. Install Dependencies
+Clone the repository and run:
+```bash
+npm install
+```
+
+### 2. Configure Environment
+Create a `.env` (or `.env.local`) file in the root directory and add your key:
+```bash
+GROQ_API_KEY="gsk_your_groq_api_key"
+```
+
+### 3. Start the Engine
+Launch the full-stack development environment:
+```bash
+npm run dev
+```
+
+The application will be accessible via `http://localhost:3000`. Enter your first keyword to turn search demand into growth!

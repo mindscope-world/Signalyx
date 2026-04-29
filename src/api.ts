@@ -1,6 +1,6 @@
 import { Express } from 'express';
 import db from './db';
-import { GoogleGenAI, Type } from "@google/genai";
+import Groq from "groq-sdk";
 import { v4 as uuidv4 } from 'uuid';
 
 import * as fs from 'fs';
@@ -8,9 +8,9 @@ import * as fs from 'fs';
 export function setupApiRoutes(app: Express) {
   app.post('/api/query', async (req, res) => {
     try {
-      const apiKey = process.env.GEMINI_API_KEY;
+      const apiKey = process.env.GROQ_API_KEY;
       if (!apiKey) {
-         console.warn("GEMINI_API_KEY is undefined at query time!");
+         console.warn("GROQ_API_KEY is undefined at query time!");
       }
 
       const { niche } = req.body;
@@ -117,71 +117,61 @@ export function setupApiRoutes(app: Express) {
 
 async function processNicheWithAI(niche: string, queryId: string) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY is not set.");
-    const ai = new GoogleGenAI({ apiKey });
+    const apiKey = process.env.GROQ_API_KEY;
+    if (!apiKey) throw new Error("GROQ_API_KEY is not set.");
+    const groq = new Groq({ apiKey });
 
-    // Step 1: Tell Gemini to act as our NLP pipeline and generate structured data
+    // Step 1: Tell Groq to act as our NLP pipeline and generate structured data
     const prompt = `
 You are the Insight Engine for a Data-to-Decision pipeline. The user has queried the niche "${niche}".
 Act as the ETL pipeline that has scraped thousands of sources (search engines, Reddit, X). 
 Synthesize real-world data about this niche into the following JSON schema. Include realistic market signals:
-1. "keywords": 5 trending keywords related to the niche, with demand/competition stats (0-100), and search_volume.
-2. "topics": 3 semantic clusters, with name and description.
-3. "insights": 3 distinct insights (type can be: trends, pain_points, opportunities) containing actionable marketing strategy.
+{
+  "keywords": [
+    {
+      "keyword": "string",
+      "demand_score": 85,
+      "competition_score": 40,
+      "search_volume": 5000,
+      "growth_rate": 20.5
+    }
+  ],
+  "topics": [
+    {
+      "name": "string",
+      "description": "string"
+    }
+  ],
+  "insights": [
+    {
+      "type": "trends|pain_points|opportunities",
+      "content": "string"
+    }
+  ]
+}
+You MUST return exactly valid JSON representing this schema. Do NOT include markdown blocks. Do NOT include any accompanying text.
 `;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            keywords: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  keyword: { type: Type.STRING },
-                  demand_score: { type: Type.NUMBER },
-                  competition_score: { type: Type.NUMBER },
-                  search_volume: { type: Type.INTEGER },
-                  growth_rate: { type: Type.NUMBER, description: "Percent growth e.g., 20.5" }
-                },
-                required: ["keyword", "demand_score", "competition_score", "search_volume", "growth_rate"]
-              }
-            },
-            topics: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  description: { type: Type.STRING }
-                },
-                required: ["name", "description"]
-              }
-            },
-            insights: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  type: { type: Type.STRING },
-                  content: { type: Type.STRING }
-                },
-                required: ["type", "content"]
-              }
-            }
-          },
-          required: ["keywords", "topics", "insights"]
+    async function callModelWithRetry(fn: () => Promise<any>, retries = 3, backoffMs = 2000): Promise<any> {
+      try {
+        return await fn();
+      } catch (err: any) {
+        if ((err.status === 429 || err.status === 503) && retries > 0) {
+          console.warn(`API error (${err.status}). Retrying in ${backoffMs}ms...`);
+          await new Promise(r => setTimeout(r, backoffMs));
+          return callModelWithRetry(fn, retries - 1, backoffMs * 2);
         }
+        throw err;
       }
-    });
+    }
 
-    const parsed = JSON.parse(response.text || '{}');
+    const response = await callModelWithRetry(() => groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" },
+    }));
+
+    const parsed = JSON.parse(response.choices[0]?.message?.content || '{}');
     console.log(`Generated JSON for ${niche}:`, parsed);
     
     // Step 2: Ingest the generated "Processed Data" into our Postgres-style SQLite schema
