@@ -1,43 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Search, Activity, Target, Zap, LayoutDashboard, BrainCircuit, RefreshCw, BarChart2, Bell, User, Mouse, Facebook, Instagram, Twitter, ChevronDown, ChevronRight, ZapOff } from 'lucide-react';
-import { 
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, ScatterChart, ZAxis, Scatter
-} from 'recharts';
-
-import { Input } from './components/ui/input';
-import { Button } from './components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
-import { Badge } from './components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
-import { Progress } from './components/ui/progress';
+import { Search, Activity, Target, Zap, LayoutDashboard, BrainCircuit, RefreshCw, BarChart2, Bell, User, Mouse, Facebook, Instagram, Twitter, ChevronDown, ChevronRight, ZapOff, ArrowUpRight, TrendingUp, AlertTriangle, Lightbulb, FileText, Globe } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table';
-import { Skeleton } from './components/ui/skeleton';
+import { Input } from './components/ui/input';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'explore' | 'dashboards' | 'queries'>('explore');
   const [niche, setNiche] = useState('');
-  const [currentNiche, setCurrentNiche] = useState('Type 2 Diabetes Alternatives');
+  const [currentNiche, setCurrentNiche] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [data, setData] = useState<any>(null);
   const [recentQueries, setRecentQueries] = useState<any[]>([]);
-  
-  // New States
   const [dashboardsList, setDashboardsList] = useState<any[]>([]);
   const [queriesList, setQueriesList] = useState<any[]>([]);
 
-  const parseContent = (content: string) => {
-    if (!content) return "No insight generated.";
-    try {
-      const parsed = JSON.parse(content);
-      return typeof parsed === 'object' ? JSON.stringify(parsed) : String(parsed);
-    } catch {
-      return String(content).replace(/^"|"$/g, '');
-    }
-  };
-
   useEffect(() => {
-    // Initial fetch for demo purposes
-    fetchDashboard(currentNiche);
     fetchRecentQueries();
   }, []);
 
@@ -81,13 +57,11 @@ export default function App() {
       const res = await fetch(`/api/dashboard/${encodeURIComponent(targetNiche)}`);
       if (res.ok) {
         const json = await res.json();
-        // If empty, the engine hasn't processed it yet
-        if ((json.keywords && json.keywords.length > 0) || (json.insights && json.insights.length > 0)) {
+        // Check if strategy data object is populated
+        if (json && Object.keys(json).length > 0 && json.demand_intelligence) {
           setData(json);
         } else {
-           if (isProcessing) {
-             // Let it continue processing
-           } else {
+           if (!isProcessing) {
              setData(null);
              alert("Pipeline completed, but no signals were extracted.");
            }
@@ -103,7 +77,7 @@ export default function App() {
     if (!niche) return;
     setIsProcessing(true);
     setCurrentNiche(niche);
-    setData(null); // Clear old
+    setData(null);
 
     try {
       const res = await fetch('/api/query', {
@@ -114,7 +88,6 @@ export default function App() {
       const result = await res.json();
       
       if (result.queryId) {
-        // Poll for status
         pollStatus(result.queryId, niche);
       } else {
         await fetchDashboard(niche);
@@ -129,18 +102,16 @@ export default function App() {
   const pollStatus = async (queryId: string, targetNiche: string) => {
     try {
       const res = await fetch(`/api/status/${queryId}`);
-      const data = await res.json();
+      const statusData = await res.json();
       
-      if (data.status === 'completed') {
+      if (statusData.status === 'completed') {
         await fetchDashboard(targetNiche);
         fetchRecentQueries();
         setIsProcessing(false);
-      } else if (data.status === 'failed') {
-        // Fetch error log if possible or show detailed error
-        alert("Pipeline failed to process niche: " + (data.error_message || "Unknown error. Check console."));
+      } else if (statusData.status === 'failed') {
+        alert("Pipeline failed to process niche: " + (statusData.error_message || "Unknown error. Check console."));
         setIsProcessing(false);
       } else {
-        // Continue polling
         setTimeout(() => pollStatus(queryId, targetNiche), 2000);
       }
     } catch (error) {
@@ -172,35 +143,10 @@ export default function App() {
             Queries
           </button>
         </div>
-        
-        <div className="flex flex-col items-center gap-2">
-           <span className="text-xs font-bold text-stone-700">EN</span>
-           <ChevronDown className="w-4 h-4 text-stone-500" />
-        </div>
       </nav>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-y-auto w-full relative">
-        
-        {/* Right Sidebar Social/Actions */}
-        <div className="fixed right-6 top-8 bottom-8 flex flex-col justify-between items-center z-20 pointer-events-none hidden lg:flex">
-          <div className="flex flex-col gap-6 pointer-events-auto neo-flat p-3 rounded-full">
-            <User className="w-5 h-5 text-stone-700 cursor-pointer hover:text-stone-900 transition-colors" />
-            <Bell className="w-5 h-5 text-stone-700 cursor-pointer hover:text-stone-900 transition-colors" />
-          </div>
-          <div className="flex flex-col gap-6 pointer-events-auto">
-            <Facebook className="w-4 h-4 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer" />
-            <Instagram className="w-4 h-4 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer" />
-            <Twitter className="w-4 h-4 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer" />
-          </div>
-        </div>
-
-        {/* Scroll Indicator Bottom Center */}
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center text-stone-400 z-10 pointer-events-none hidden md:flex">
-           <Mouse className="w-5 h-5 mb-1" />
-           <span className="text-[10px] tracking-widest uppercase">Scroll Down</span>
-        </div>
-
         {/* Header */}
         <header className="px-6 md:px-12 py-8 flex items-center justify-between w-full max-w-7xl mx-auto">
           <div className="flex items-center gap-4 group cursor-pointer" onClick={() => setActiveView('explore')}>
@@ -208,14 +154,6 @@ export default function App() {
               <BrainCircuit className="w-6 h-6 text-amber-500" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-stone-800">Signalyx</h1>
-          </div>
-          <div className="lg:hidden flex gap-4">
-             <div className="w-10 h-10 rounded-full neo-flat flex items-center justify-center">
-               <User className="w-5 h-5 text-stone-700" />
-             </div>
-             <div className="w-10 h-10 rounded-full neo-flat flex items-center justify-center">
-               <Bell className="w-5 h-5 text-stone-700" />
-             </div>
           </div>
         </header>
 
@@ -227,403 +165,489 @@ export default function App() {
               <div className="flex flex-col lg:flex-row items-center justify-between gap-12 mt-4 lg:mt-12 mb-16">
                 <div className="flex-1 space-y-8 max-w-xl">
                   <h2 className="text-5xl lg:text-7xl font-bold tracking-tighter text-stone-800 leading-[1.1]">
-                    Market <br/><span className="text-stone-600">Intelligence</span>
+                    SEO <br/><span className="text-stone-600">Intelligence</span>
                   </h2>
-              <p className="text-stone-500 text-lg leading-relaxed font-medium">
-                Continuously scrape, interpret, and convert niche-specific demand signals into actionable marketing insights in minutes.
-              </p>
-              
-              <form onSubmit={handleRunPipeline} className="mt-8 flex flex-col sm:flex-row items-center gap-6 w-full max-w-lg">
-                <div className="w-full neo-pressed rounded-full px-6 py-4 flex items-center gap-3">
-                  <Search className="w-5 h-5 text-stone-400 shrink-0" />
-                  <Input 
-                    placeholder="Enter a niche (e.g. Fintech AI)..." 
-                    className="border-none shadow-none bg-transparent focus-visible:ring-0 text-base h-auto py-0 text-stone-600 placeholder:text-stone-400"
-                    value={niche}
-                    onChange={(e) => setNiche(e.target.value)}
-                    disabled={isProcessing}
-                  />
-                </div>
-                <button 
-                  type="submit" 
-                  disabled={isProcessing || !niche} 
-                  className="neo-btn rounded-full px-8 py-4 font-semibold text-stone-700 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto justify-center group"
-                >
-                  {isProcessing ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Run Engine"}
-                  {!isProcessing && <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />}
-                </button>
-              </form>
-            </div>
-
-            {/* Illustration / Graphic Area (Neomorphic focus) */}
-            <div className="flex-1 flex justify-center items-center w-full max-w-lg relative">
-              <div className="w-64 h-64 md:w-80 md:h-80 rounded-full neo-flat flex items-center justify-center relative">
-                 <div className="w-48 h-48 md:w-60 md:h-60 rounded-full neo-pressed flex items-center justify-center">
-                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-amber-400 neo-flat flex items-center justify-center relative group cursor-pointer hover:bg-amber-300 transition-colors">
-                      <Target className="w-16 h-16 text-white" />
+                  <p className="text-stone-500 text-lg leading-relaxed font-medium">
+                    Type a keyword. Get a full SEO strategy.<br/> Turn search demand into growth.
+                  </p>
+                  
+                  <form onSubmit={handleRunPipeline} className="mt-8 flex flex-col sm:flex-row items-center gap-6 w-full max-w-lg">
+                    <div className="w-full neo-pressed rounded-full px-6 py-4 flex items-center gap-3">
+                      <Search className="w-5 h-5 text-stone-400 shrink-0" />
+                      <Input 
+                        placeholder="e.g. diabetes treatment" 
+                        className="border-none shadow-none bg-transparent focus-visible:ring-0 text-base h-auto py-0 text-stone-600 placeholder:text-stone-400"
+                        value={niche}
+                        onChange={(e) => setNiche(e.target.value)}
+                        disabled={isProcessing}
+                      />
                     </div>
-                 </div>
-                 {/* Decorative floating elements */}
-                 <div className="absolute top-0 right-0 w-16 h-16 rounded-full neo-flat flex items-center justify-center">
-                   <Activity className="w-6 h-6 text-emerald-500" />
-                 </div>
-                 <div className="absolute bottom-4 left-0 w-20 h-20 rounded-full neo-flat flex items-center justify-center">
-                   <Zap className="w-8 h-8 text-blue-500" />
-                 </div>
+                    <button 
+                      type="submit" 
+                      disabled={isProcessing || !niche} 
+                      className="neo-btn rounded-full px-8 py-4 font-semibold text-stone-700 flex items-center gap-2 whitespace-nowrap w-full sm:w-auto justify-center group"
+                    >
+                      {isProcessing ? (
+                        <><RefreshCw className="w-5 h-5 animate-spin" /> Mining...</>
+                      ) : (
+                        <><Zap className="w-5 h-5 text-amber-500 group-hover:scale-110 transition-transform" /> Run Engine</>
+                      )}
+                    </button>
+                  </form>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Loading State Simulator */}
-          {isProcessing && (
-            <div className="neo-flat rounded-[2rem] p-12 text-center max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 mb-16 relative overflow-hidden">
-               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]"></div>
-               <div className="inline-flex neo-pressed p-6 rounded-full text-amber-500 mb-8">
-                 <RefreshCw className="w-10 h-10 animate-spin" />
-               </div>
-               <h3 className="text-2xl font-bold text-stone-800 mb-3">Orchestrating Pipeline...</h3>
-               <p className="text-stone-500 mb-8 max-w-md mx-auto text-lg">Running distributed data collection, cleaning noise, and computing semantic embeddings.</p>
-               
-               <div className="neo-pressed h-4 rounded-full w-full overflow-hidden mb-4 p-0.5">
-                 <div className="h-full bg-amber-400 rounded-full w-[45%] neo-flat animate-pulse"></div>
-               </div>
-               <div className="flex justify-between text-sm text-stone-500 font-medium px-2">
-                 <span>Scraping Sources</span>
-                 <span>Extracting Sentiments</span>
-                 <span>LLM Synthesis</span>
-               </div>
-            </div>
+              {/* Loading State Simulator */}
+              {isProcessing && (
+                <div className="neo-flat rounded-[2rem] p-12 text-center max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 mb-16">
+                  <div className="w-24 h-24 mx-auto neo-pressed rounded-full flex items-center justify-center mb-8 relative overflow-hidden">
+                    <BrainCircuit className="w-10 h-10 text-amber-500 animate-pulse relative z-10" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-stone-800 mb-4 animate-pulse">Running Intelligence Engine...</h3>
+                  <div className="space-y-3 max-w-md mx-auto text-stone-500 font-medium">
+                    <p className="flex items-center justify-between"><span className="flex items-center gap-2"><Target className="w-4 h-4"/> Parsing search behavior</span> <span className="text-emerald-500">Done</span></p>
+                    <p className="flex items-center justify-between"><span className="flex items-center gap-2"><Globe className="w-4 h-4"/> Breaking down SERP</span> <span className="text-amber-500 animate-pulse">Running</span></p>
+                  </div>
+                </div>
+              )}
+
+              {/* DASHBOARD DISPLAY */}
+              {data && !isProcessing && (
+                <div className="space-y-12 animate-in fade-in duration-700 mt-12">
+                  <div className="flex items-center gap-6 pb-4 border-b border-white/20">
+                    <h2 className="text-4xl font-black tracking-tight text-stone-800 uppercase">Strategy Report: {currentNiche}</h2>
+                  </div>
+
+                  {/* 1. Demand & 5. Opportunity */}
+                  <div className="grid lg:grid-cols-2 gap-8">
+                    <div className="neo-flat rounded-[2rem] p-8">
+                       <h3 className="flex items-center gap-3 text-2xl font-bold text-stone-800 mb-8"><BarChart2 className="text-blue-500"/> 1. Demand Intelligence</h3>
+                       <div className="grid grid-cols-2 gap-4 mb-8">
+                          <div className="neo-pressed p-4 rounded-xl">
+                            <p className="text-sm font-bold text-stone-500 mb-1">Total Volume</p>
+                            <p className="text-3xl font-bold text-blue-600">{data.demand_intelligence?.total_search_volume}</p>
+                          </div>
+                          <div className="neo-pressed p-4 rounded-xl">
+                            <p className="text-sm font-bold text-stone-500 mb-1">Trend</p>
+                            <p className="text-3xl font-bold text-emerald-600 flex items-center gap-2">{data.demand_intelligence?.trend} <TrendingUp className="w-6 h-6"/></p>
+                          </div>
+                          <div className="col-span-2 neo-pressed p-4 rounded-xl">
+                            <p className="text-sm font-bold text-stone-500 mb-2">Demand Stability</p>
+                            <span className="neo-flat px-4 py-1.5 rounded-full text-sm font-bold text-stone-700">{data.demand_intelligence?.demand_stability}</span>
+                          </div>
+                       </div>
+                       
+                       <h4 className="font-bold text-stone-700 mb-4">Top Rising Queries</h4>
+                       <Table className="mb-6">
+                         <TableHeader>
+                           <TableRow className="border-b-0">
+                             <TableHead className="font-bold text-stone-500">Query</TableHead>
+                             <TableHead className="font-bold text-stone-500">Growth</TableHead>
+                             <TableHead className="font-bold text-stone-500">Intent</TableHead>
+                           </TableRow>
+                         </TableHeader>
+                         <TableBody>
+                           {data.demand_intelligence?.top_queries?.map((q: any, i: number) => (
+                             <TableRow key={i} className="hover:bg-transparent">
+                               <TableCell className="font-semibold text-stone-800">{q.query}</TableCell>
+                               <TableCell className="font-mono text-emerald-600 font-bold">{q.growth}</TableCell>
+                               <TableCell className="font-medium text-stone-500">{q.intent}</TableCell>
+                             </TableRow>
+                           ))}
+                         </TableBody>
+                       </Table>
+                       <div className="bg-amber-100/50 p-4 rounded-xl border border-amber-200">
+                          <p className="text-sm font-bold text-amber-800 mb-1">💡 Demand Insight:</p>
+                          <p className="text-amber-900 font-medium leading-relaxed">{data.demand_intelligence?.insight}</p>
+                       </div>
+                    </div>
+
+                    <div className="neo-flat rounded-[2rem] p-8 flex flex-col">
+                       <h3 className="flex items-center gap-3 text-2xl font-bold text-stone-800 mb-8"><Target className="text-rose-500"/> 5. Opportunity Scoring</h3>
+                       <div className="flex items-end gap-6 mb-8 neo-pressed p-6 rounded-2xl">
+                          <div className="flex-1 text-center">
+                            <p className="text-sm font-bold text-stone-500 mb-2">Demand</p>
+                            <p className="text-4xl font-bold text-blue-500">{data.opportunity_scoring?.demand_score}</p>
+                          </div>
+                          <div className="flex-1 text-center">
+                            <p className="text-sm font-bold text-stone-500 mb-2">Competition</p>
+                            <p className="text-4xl font-bold text-rose-500">{data.opportunity_scoring?.competition_score}</p>
+                          </div>
+                          <div className="flex-1 text-center neo-flat p-4 rounded-xl">
+                            <p className="text-sm font-bold text-emerald-600 mb-2 uppercase">Opportunity</p>
+                            <p className="text-5xl font-black text-emerald-500">{data.opportunity_scoring?.opportunity_score}</p>
+                          </div>
+                       </div>
+
+                       <h4 className="font-bold text-stone-700 mb-4">High-ROI Keyword Targets</h4>
+                       <div className="flex-1 space-y-3 mb-6">
+                         {data.opportunity_scoring?.high_roi_keywords?.map((kw: any, i: number) => (
+                           <div key={i} className="flex justify-between items-center bg-white/50 p-4 rounded-xl">
+                             <span className="font-bold text-stone-800">{kw.keyword}</span>
+                             <span className="neo-pressed px-4 py-1 rounded-full text-emerald-600 font-black font-mono">{kw.score} Score</span>
+                           </div>
+                         ))}
+                       </div>
+
+                       <div className="bg-emerald-100/50 p-4 rounded-xl border border-emerald-200 mt-auto">
+                          <p className="text-sm font-bold text-emerald-800 mb-1">💡 Opportunity Insight:</p>
+                          <p className="text-emerald-900 font-medium leading-relaxed">{data.opportunity_scoring?.insight}</p>
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Intent & 4. Competition */}
+                  <div className="grid lg:grid-cols-5 gap-8">
+                    <div className="lg:col-span-2 neo-flat rounded-[2rem] p-8">
+                       <h3 className="flex items-center gap-3 text-2xl font-bold text-stone-800 mb-8"><Activity className="text-purple-500"/> 2. Search Intent</h3>
+                       <div className="space-y-6 mb-8">
+                         <div>
+                           <div className="flex justify-between font-bold mb-2 text-stone-700">
+                             <span>Informational</span> <span>{data.search_intent?.informational_pct}%</span>
+                           </div>
+                           <div className="h-4 bg-stone-200 rounded-full overflow-hidden">
+                             <div className="h-full bg-blue-400 rounded-full" style={{ width: `${data.search_intent?.informational_pct}%` }}></div>
+                           </div>
+                         </div>
+                         <div>
+                           <div className="flex justify-between font-bold mb-2 text-stone-700">
+                             <span>Commercial</span> <span>{data.search_intent?.commercial_pct}%</span>
+                           </div>
+                           <div className="h-4 bg-stone-200 rounded-full overflow-hidden">
+                             <div className="h-full bg-amber-400 rounded-full" style={{ width: `${data.search_intent?.commercial_pct}%` }}></div>
+                           </div>
+                         </div>
+                         <div>
+                           <div className="flex justify-between font-bold mb-2 text-stone-700">
+                             <span>Transactional</span> <span>{data.search_intent?.transactional_pct}%</span>
+                           </div>
+                           <div className="h-4 bg-stone-200 rounded-full overflow-hidden">
+                             <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${data.search_intent?.transactional_pct}%` }}></div>
+                           </div>
+                         </div>
+                       </div>
+                       <div className="bg-purple-100/50 p-4 rounded-xl border border-purple-200">
+                          <p className="text-sm font-bold text-purple-800 mb-1">💡 Intent Interpretation:</p>
+                          <p className="text-purple-900 font-medium leading-relaxed">{data.search_intent?.insight}</p>
+                       </div>
+                    </div>
+
+                    <div className="lg:col-span-3 neo-flat rounded-[2rem] p-8">
+                       <h3 className="flex items-center gap-3 text-2xl font-bold text-stone-800 mb-8"><Globe className="text-indigo-500"/> 4. Competitive Landscape</h3>
+                       
+                       <div className="grid sm:grid-cols-2 gap-6 mb-8">
+                         <div className="neo-pressed p-6 rounded-2xl">
+                           <h4 className="font-bold text-stone-500 uppercase text-sm tracking-widest mb-4">Top Domains</h4>
+                           <ul className="space-y-2">
+                             {data.competitive_landscape?.top_domains?.map((domain: string, i: number) => (
+                               <li key={i} className="font-mono text-stone-800 font-medium flex items-center gap-2"><ArrowUpRight className="w-4 h-4 text-stone-400"/> {domain}</li>
+                             ))}
+                           </ul>
+                         </div>
+                         <div className="neo-pressed p-6 rounded-2xl">
+                           <h4 className="font-bold text-stone-500 uppercase text-sm tracking-widest mb-4">SERP Characteristics</h4>
+                           <ul className="space-y-2">
+                             {data.competitive_landscape?.serp_characteristics?.map((char: string, i: number) => (
+                               <li key={i} className="text-stone-700 font-medium border-b border-stone-200/50 pb-2">{char}</li>
+                             ))}
+                           </ul>
+                         </div>
+                       </div>
+
+                       <h4 className="font-bold text-stone-700 mb-4">Content Gap Analysis</h4>
+                       <Table className="mb-6">
+                         <TableHeader>
+                           <TableRow className="border-b-0">
+                             <TableHead className="font-bold text-stone-500">Gap Area</TableHead>
+                             <TableHead className="font-bold text-stone-500">Opportunity</TableHead>
+                             <TableHead className="font-bold text-stone-500">Practical Action</TableHead>
+                           </TableRow>
+                         </TableHeader>
+                         <TableBody>
+                           {data.competitive_landscape?.content_gaps?.map((gap: any, i: number) => (
+                             <TableRow key={i} className="hover:bg-transparent">
+                               <TableCell className="font-semibold text-stone-800">{gap.gap_area}</TableCell>
+                               <TableCell>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${gap.opportunity === 'High' || gap.opportunity === 'Very High' ? 'bg-rose-100 text-rose-700' : 'bg-stone-200 text-stone-700'}`}>{gap.opportunity}</span>
+                               </TableCell>
+                               <TableCell className="font-medium text-stone-500 leading-tight">{gap.practical_step}</TableCell>
+                             </TableRow>
+                           ))}
+                         </TableBody>
+                       </Table>
+                       
+                       <div className="bg-indigo-100/50 p-4 rounded-xl border border-indigo-200">
+                          <p className="text-sm font-bold text-indigo-800 mb-1">💡 Competitive Insight:</p>
+                          <p className="text-indigo-900 font-medium leading-relaxed">{data.competitive_landscape?.insight}</p>
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Topics & 6. Pain Points */}
+                  <div className="grid lg:grid-cols-2 gap-8">
+                    <div className="neo-flat rounded-[2rem] p-8">
+                       <h3 className="flex items-center gap-3 text-2xl font-bold text-stone-800 mb-8"><LayoutDashboard className="text-stone-500"/> 3. Topic Cluster Map</h3>
+                       <div className="neo-pressed p-6 rounded-2xl mb-8 border-l-4 border-stone-800">
+                         <p className="text-sm font-bold text-stone-500 uppercase tracking-widest mb-2">Pillar Topic</p>
+                         <p className="text-3xl font-black text-stone-800">{data.topic_clusters?.pillar_topic}</p>
+                       </div>
+                       <div className="space-y-6 mb-8 pl-4 border-l border-stone-200">
+                         {data.topic_clusters?.clusters?.map((cluster: any, idx: number) => (
+                           <div key={idx} className="relative">
+                             <div className="absolute -left-[21px] top-2 w-3 h-3 rounded-full bg-stone-300"></div>
+                             <h4 className="font-bold text-stone-700 text-lg mb-3">{String.fromCharCode(65 + idx)}. {cluster.name}</h4>
+                             <ul className="flex flex-wrap gap-2">
+                               {cluster.keywords?.map((kw: string, i: number) => (
+                                 <li key={i} className="bg-white/60 px-3 py-1.5 rounded-md text-sm font-semibold text-stone-600 shadow-sm border border-stone-100">{kw}</li>
+                               ))}
+                             </ul>
+                           </div>
+                         ))}
+                       </div>
+                       <div className="bg-stone-200/50 p-4 rounded-xl border border-stone-300">
+                          <p className="text-sm font-bold text-stone-700 mb-1">💡 Structural Insight:</p>
+                          <p className="text-stone-800 font-medium leading-relaxed">{data.topic_clusters?.insight}</p>
+                       </div>
+                    </div>
+
+                    <div className="neo-flat rounded-[2rem] p-8 flex flex-col bg-rose-50/50">
+                       <h3 className="flex items-center gap-3 text-2xl font-bold text-rose-900 mb-8"><AlertTriangle className="text-rose-500"/> 6. Audience Pain Points</h3>
+                       <div className="flex-1 space-y-4 mb-8">
+                         {data.audience_pain_points?.points?.map((pt: string, i: number) => (
+                           <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-rose-100 flex items-start gap-4">
+                             <div className="w-8 h-8 shrink-0 rounded-full bg-rose-100 text-rose-600 font-bold flex items-center justify-center">{i+1}</div>
+                             <p className="text-rose-900 font-medium pt-1">{pt}</p>
+                           </div>
+                         ))}
+                       </div>
+                       <div className="bg-rose-100 p-6 rounded-2xl border border-rose-200 mt-auto">
+                          <p className="text-sm font-bold text-rose-800 uppercase tracking-widest mb-2">Emotional Drivers</p>
+                          <p className="text-rose-950 text-xl font-bold leading-relaxed">{data.audience_pain_points?.insight}</p>
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* 7. Content Strategy & 8. Execution Plan */}
+                  <div className="neo-flat rounded-[2rem] p-8 md:p-12">
+                     <h3 className="flex items-center gap-3 text-3xl font-black text-stone-800 mb-12"><FileText className="text-emerald-500 w-8 h-8"/> SEO Execution & Content Playbook</h3>
+                     <div className="grid lg:grid-cols-2 gap-12">
+                       <div>
+                         <h4 className="text-xl font-bold text-stone-800 mb-6 bg-emerald-100 inline-block px-4 py-1.5 rounded-full text-emerald-800">7. Content Architecture</h4>
+                         
+                         <div className="mb-6">
+                           <p className="text-sm font-bold text-stone-500 uppercase tracking-widest mb-2">Pillar Page Target</p>
+                           <p className="text-2xl font-bold text-stone-800">{data.content_strategy?.pillar_page}</p>
+                         </div>
+                         
+                         <div className="mb-6">
+                           <p className="text-sm font-bold text-stone-500 uppercase tracking-widest mb-3">Cluster Articles</p>
+                           <ul className="space-y-2">
+                             {data.content_strategy?.cluster_content?.map((title: string, i: number) => (
+                               <li key={i} className="font-semibold text-stone-700 flex items-center gap-2"><div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div> {title}</li>
+                             ))}
+                           </ul>
+                         </div>
+
+                         <div>
+                           <p className="text-sm font-bold text-stone-500 uppercase tracking-widest mb-3">Conversion Content</p>
+                           <ul className="space-y-2">
+                             {data.content_strategy?.conversion_content?.map((title: string, i: number) => (
+                               <li key={i} className="font-semibold text-rose-700 flex items-center gap-2 bg-rose-50 px-3 py-2 rounded-lg">{title}</li>
+                             ))}
+                           </ul>
+                         </div>
+                       </div>
+
+                       <div className="neo-pressed p-8 rounded-[2rem]">
+                         <h4 className="text-xl font-bold text-stone-800 mb-8 border-b border-stone-200 pb-4">8. Deployment Timeline</h4>
+                         <div className="space-y-8 relative">
+                            <div className="absolute left-3.5 top-2 bottom-2 w-0.5 bg-stone-300"></div>
+                            
+                            <div className="relative pl-10">
+                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10">1</div>
+                              <h5 className="font-bold text-stone-800 mb-2">Week 1–2: Foundation</h5>
+                              <ul className="space-y-1">
+                                {data.seo_execution_plan?.week_1_2?.map((step: string, i: number) => (
+                                  <li key={i} className="text-stone-600 font-medium">- {step}</li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            <div className="relative pl-10">
+                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10">2</div>
+                              <h5 className="font-bold text-stone-800 mb-2">Week 3–4: Linking</h5>
+                              <ul className="space-y-1">
+                                {data.seo_execution_plan?.week_3_4?.map((step: string, i: number) => (
+                                  <li key={i} className="text-stone-600 font-medium">- {step}</li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            <div className="relative pl-10">
+                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10">3</div>
+                              <h5 className="font-bold text-stone-800 mb-2">Month 2: Conversion & Authority</h5>
+                              <ul className="space-y-1">
+                                {data.seo_execution_plan?.month_2?.map((step: string, i: number) => (
+                                  <li key={i} className="text-stone-600 font-medium">- {step}</li>
+                                ))}
+                              </ul>
+                            </div>
+                         </div>
+                       </div>
+                     </div>
+                  </div>
+
+                  {/* 9 & 10. AI Angle & Final Insight */}
+                  <div className="bg-stone-800 rounded-[2rem] p-8 md:p-12 text-white shadow-xl relative overflow-hidden">
+                    <div className="absolute -right-20 -top-20 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
+                    <div className="grid md:grid-cols-2 gap-12 relative z-10">
+                       <div>
+                         <h4 className="flex items-center gap-3 text-2xl font-bold text-amber-400 mb-6"><BrainCircuit/> 9. AI Winning Angles</h4>
+                         <p className="text-stone-400 font-medium mb-4">Content tone & messaging recommendations to capture high-intent traffic:</p>
+                         <div className="space-y-4">
+                           {data.ai_content_angle?.winning_messaging?.map((msg: string, i: number) => (
+                             <div key={i} className="bg-stone-700/50 p-4 rounded-xl border border-stone-600">
+                               <p className="font-bold text-stone-100 text-lg">"{msg}"</p>
+                             </div>
+                           ))}
+                         </div>
+                       </div>
+                       <div className="flex flex-col justify-center">
+                         <h4 className="flex items-center gap-3 text-2xl font-bold text-white mb-6"><Lightbulb className="text-emerald-400"/> 10. Final Strategic Insight</h4>
+                         <p className="text-stone-300 text-xl leading-relaxed font-medium">
+                           {data.final_strategic_insight}
+                         </p>
+                       </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+              
+              {/* Placeholder before query */}
+              {!data && !isProcessing && (
+                <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-1000">
+                  <div className="neo-pressed w-32 h-32 rounded-full flex justify-center items-center mb-8 relative">
+                    <ZapOff className="w-12 h-12 text-stone-400 opacity-50" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-stone-800 mb-4">Awaiting Input</h3>
+                  <p className="text-stone-500 font-medium max-w-md mx-auto text-center text-lg mb-12">
+                    The engine is idle. Enter a keyword to generate fresh SEO intelligence.
+                  </p>
+                  
+                  {recentQueries.length > 0 && (
+                     <div className="w-full max-w-2xl neo-flat rounded-[2rem] p-8">
+                       <p className="text-sm font-bold text-stone-500 uppercase tracking-widest mb-6 text-center">Recent Pipelines</p>
+                       <div className="flex flex-wrap justify-center gap-4">
+                         {recentQueries.map((q, idx) => (
+                           <button 
+                             key={idx} 
+                             className="neo-btn rounded-full px-6 py-3 font-semibold text-stone-700"
+                             onClick={() => {
+                               setNiche(q.query);
+                               setCurrentNiche(q.query);
+                               fetchDashboard(q.query);
+                             }}
+                           >
+                             {q.query}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
-          {/* Dashboard Display */}
-          {data && !isProcessing && (
-            <div className="space-y-12 animate-in fade-in duration-700 mt-12">
+          {/* Dashboards View */}
+          {activeView === 'dashboards' && (
+            <div className="animate-in fade-in duration-500 mt-4 lg:mt-12">
+              <div className="flex items-center gap-4 mb-12 border-b border-white/20 pb-4">
+                 <LayoutDashboard className="w-8 h-8 text-blue-500" />
+                 <h2 className="text-4xl font-bold tracking-tight text-stone-800">Saved SEO Strategies</h2>
+              </div>
               
-              {/* Header / Badges */}
-              <div className="flex items-center gap-6 flex-wrap pb-4 border-b border-white/20">
-                <h2 className="text-3xl font-bold tracking-tight text-stone-800">Report: {currentNiche}</h2>
-                <div className="neo-flat px-4 py-2 rounded-full text-sm font-semibold text-emerald-600 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                  Fresh Data
-                </div>
-                <div className="neo-pressed px-4 py-2 rounded-full text-sm font-medium text-stone-600 flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4" />
-                  {data.keywords?.length || 0} Viable Keywords
-                </div>
-              </div>
-
-              {/* Top Cards */}
-              <div className="grid md:grid-cols-3 gap-8">
-                 <div className="neo-flat rounded-[2rem] p-8">
-                   <div className="flex items-center gap-4 mb-6 text-stone-500 font-medium">
-                     <div className="neo-pressed p-3 rounded-full">
-                       <Target className="w-5 h-5 text-blue-500" />
-                     </div>
-                     Total Market Demand
-                   </div>
-                   <div className="text-4xl font-bold text-stone-800 mb-2">
-                     {data.keywords?.reduce((acc: number, val: any) => acc + (val.search_volume || 0), 0).toLocaleString()}
-                   </div>
-                   <p className="text-sm text-emerald-600 font-semibold neo-pressed inline-block px-3 py-1 rounded-full">+12% vs last month</p>
+              {dashboardsList.length === 0 ? (
+                 <div className="text-center py-20 neo-flat rounded-[2rem]">
+                   <p className="text-stone-500 font-medium text-lg">No strategic dashboards generated yet.</p>
                  </div>
-
-                 <div className="neo-flat rounded-[2rem] p-8">
-                   <div className="flex items-center gap-4 mb-6 text-stone-500 font-medium">
-                     <div className="neo-pressed p-3 rounded-full">
-                       <Activity className="w-5 h-5 text-emerald-500" />
-                     </div>
-                     Avg. Opportunity
-                   </div>
-                   <div className="text-4xl font-bold text-stone-800 mb-2">
-                     {(data.keywords?.reduce((acc: number, val: any) => acc + (val.opportunity_score || 0), 0) / (data.keywords?.length || 1)).toFixed(2)}
-                   </div>
-                   <p className="text-sm text-stone-500 font-medium neo-pressed inline-block px-3 py-1 rounded-full">Demand / Competition</p>
-                 </div>
-
-                 <div className="neo-flat rounded-[2rem] p-8">
-                   <div className="flex items-center gap-4 mb-6 text-stone-500 font-medium">
-                     <div className="neo-pressed p-3 rounded-full">
-                       <Zap className="w-5 h-5 text-amber-500" />
-                     </div>
-                     Detected Intents
-                   </div>
-                   <div className="text-4xl font-bold text-stone-800 mb-4">Active</div>
-                   <div className="flex gap-3">
-                     <span className="neo-pressed px-4 py-1.5 rounded-full text-sm font-medium text-stone-600">Informational</span>
-                     <span className="neo-pressed px-4 py-1.5 rounded-full text-sm font-medium text-stone-600">Commercial</span>
-                   </div>
-                 </div>
-              </div>
-
-              {/* LLM INSIGHTS */}
-              <div className="neo-flat rounded-[2rem] p-8 md:p-12">
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="neo-pressed p-4 rounded-full">
-                    <BrainCircuit className="w-6 h-6 text-amber-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-stone-800">Marketing & Content Angles</h3>
-                    <p className="text-stone-500 font-medium">Synthesized from raw NLP layer</p>
-                  </div>
-                </div>
-                
-                <div className="grid lg:grid-cols-3 gap-8">
-                  {data.insights?.map((insight: any, i: number) => (
-                    <div key={i} className="neo-pressed rounded-2xl p-6 flex flex-col items-start hover:neo-flat transition-all cursor-default">
-                      <div className="neo-flat px-4 py-2 rounded-full text-xs font-bold text-stone-700 uppercase tracking-wider mb-6">
-                        {insight.type.replace('_', ' ')}
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {dashboardsList.map((db, i) => (
+                    <div key={i} className="neo-flat rounded-[2rem] p-8 flex flex-col justify-between group hover:neo-pressed transition-all cursor-pointer"
+                         onClick={() => {
+                           setNiche(db.niche);
+                           setCurrentNiche(db.niche);
+                           fetchDashboard(db.niche);
+                           setActiveView('explore');
+                         }}>
+                      <div>
+                        <h3 className="text-xl font-bold text-stone-800 mb-4 group-hover:text-blue-600 transition-colors">{db.niche}</h3>
+                        <p className="text-stone-500 text-sm font-medium mb-6">Last updated: {new Date(db.created_at).toLocaleDateString()}</p>
                       </div>
-                      <p className="text-stone-600 leading-relaxed font-medium">
-                        {parseContent(insight.content)}
-                      </p>
+                      <div className="flex justify-between items-center pt-4 border-t border-white/20">
+                        <span className="neo-pressed px-3 py-1.5 rounded-full text-xs font-bold text-emerald-500 uppercase">Strategy Ready</span>
+                        <ChevronRight className="w-5 h-5 text-stone-400 group-hover:text-stone-800 transition-colors" />
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-              
-              {/* Main Content Split: Chart & Table */}
-              <div className="grid xl:grid-cols-5 gap-8">
-                 {/* Demand vs Competition Scatter Plot */}
-                 <div className="xl:col-span-2 neo-flat rounded-[2rem] p-8">
-                    <div className="mb-6">
-                      <h3 className="text-xl font-bold text-stone-800 mb-2">Opportunity Matrix</h3>
-                      <p className="text-stone-500 text-sm font-medium">Top-left indicates high priority signals.</p>
-                     </div>
-                    <div className="h-[350px] neo-pressed rounded-2xl p-4">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.2} stroke="#78716c" />
-                          <XAxis type="number" dataKey="competition_score" name="Competition" 
-                                 axisLine={{stroke: 'transparent'}} tickLine={false} 
-                                 tick={{fill: '#a8a29e', fontSize: 12, fontWeight: 500}} 
-                                 domain={[0, 100]} />
-                          <YAxis type="number" dataKey="demand_score" name="Demand" 
-                                 axisLine={{stroke: 'transparent'}} tickLine={false} 
-                                 tick={{fill: '#a8a29e', fontSize: 12, fontWeight: 500}}
-                                 domain={[0, 100]} />
-                          <ZAxis type="number" dataKey="search_volume" range={[200, 800]} name="Search Vol" />
-                          <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} 
-                            content={({ active, payload }) => {
-                              if (active && payload && payload.length) {
-                                const data = payload[0].payload;
-                                return (
-                                  <div className="neo-flat p-4 rounded-xl z-50">
-                                    <p className="font-bold text-stone-800 mb-2">{data.keyword}</p>
-                                    <div className="space-y-1 text-sm font-medium text-stone-500">
-                                      <p>Demand: <span className="text-emerald-600">{data.demand_score}</span></p>
-                                      <p>Comp: <span className="text-amber-600">{data.competition_score}</span></p>
-                                      <p>Vol: <span className="text-blue-600">{data.search_volume}</span></p>
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            }}
-                          />
-                          <Scatter name="Keywords" data={data.keywords} fill="#f59e0b" fillOpacity={0.8} />
-                        </ScatterChart>
-                      </ResponsiveContainer>
-                    </div>
-                 </div>
-
-                 {/* Signal Mapping Table */}
-                 <div className="xl:col-span-3 neo-flat rounded-[2rem] p-8 overflow-hidden flex flex-col">
-                    <div className="mb-6 flex justify-between items-center pr-4">
-                      <h3 className="text-xl font-bold text-stone-800">Signal Mapping</h3>
-                      <button className="neo-btn p-3 rounded-full text-stone-600"><Search className="w-4 h-4"/></button>
-                    </div>
-                    <div className="neo-pressed rounded-2xl overflow-hidden flex-1 p-2">
-                       <div className="overflow-x-auto h-full max-h-[400px]">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="hover:bg-transparent border-b-0">
-                              <TableHead className="font-bold text-stone-500 pt-4 pb-2">Keyword</TableHead>
-                              <TableHead className="font-bold text-stone-500 pt-4 pb-2">Volume</TableHead>
-                              <TableHead className="font-bold text-stone-500 pt-4 pb-2">Demand</TableHead>
-                              <TableHead className="font-bold text-stone-500 pt-4 pb-2">Comp</TableHead>
-                              <TableHead className="font-bold text-stone-500 text-right pt-4 pb-2 pr-4">Opp</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {[...(data.keywords || [])].sort((a: any, b: any) => (b.opportunity_score || 0) - (a.opportunity_score || 0)).map((kw: any, i: number) => (
-                              <TableRow key={i} className="hover:bg-black/5 border-b-0 transition-colors">
-                                <TableCell className="font-semibold text-stone-700 py-4">{kw.keyword}</TableCell>
-                                <TableCell className="font-mono font-medium text-stone-500 py-4">{kw.search_volume?.toLocaleString()}</TableCell>
-                                <TableCell className="py-4">
-                                  <div className="neo-flat h-3 w-20 rounded-full overflow-hidden p-0.5">
-                                    <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${kw.demand_score}%` }}></div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-4">
-                                   <div className="neo-flat h-3 w-20 rounded-full overflow-hidden p-0.5">
-                                    <div className="h-full bg-amber-400 rounded-full" style={{ width: `${kw.competition_score}%` }}></div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-right font-mono text-emerald-600 font-bold text-lg py-4 pr-4">
-                                  {kw.opportunity_score ? kw.opportunity_score.toFixed(2) : '-'}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </div>
-                 </div>
-              </div>
-
-               {/* TOPIC CLUSTERS */}
-               <div className="mt-12">
-                  <h3 className="text-2xl font-bold text-stone-800 mb-8 pl-4 border-l-4 border-amber-400">Semantic Clusters</h3>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {data.topics?.map((topic: any, i: number) => (
-                      <div key={i} className="neo-flat rounded-[2rem] p-8 flex flex-col justify-between group hover:neo-pressed transition-all">
-                        <div>
-                          <div className="flex justify-between items-start mb-6">
-                            <h4 className="text-xl font-bold text-stone-800 group-hover:text-amber-500 transition-colors">{topic.name}</h4>
-                            <div className="w-10 h-10 rounded-full neo-pressed flex justify-center items-center font-mono font-bold text-stone-400 text-sm">
-                              #{i + 1}
-                            </div>
-                          </div>
-                          <p className="text-stone-600 font-medium leading-relaxed mb-6">{topic.description}</p>
-                        </div>
-                        <div className="flex justify-end pt-4 border-t border-white/20">
-                           <span className="neo-pressed px-4 py-2 rounded-full text-xs font-bold text-emerald-500 uppercase tracking-widest">
-                             High Momentum
-                           </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-               </div>
-            </div>
-          )}
-          
-          {/* Placeholder before query */}
-          {!data && !isProcessing && (
-            <div className="flex flex-col items-center justify-center py-20 animate-in fade-in duration-1000">
-              <div className="neo-pressed w-32 h-32 rounded-full flex justify-center items-center mb-8 relative">
-                <ZapOff className="w-12 h-12 text-stone-400 opacity-50" />
-              </div>
-              <h3 className="text-2xl font-bold text-stone-800 mb-4">Awaiting Input</h3>
-              <p className="text-stone-500 font-medium max-w-md mx-auto text-center text-lg mb-12">
-                The engine is idle. Run a pipeline to generate fresh market intelligence.
-              </p>
-              
-              {recentQueries.length > 0 && (
-                 <div className="w-full max-w-2xl neo-flat rounded-[2rem] p-8">
-                   <p className="text-sm font-bold text-stone-500 uppercase tracking-widest mb-6 text-center">Recent Pipelines</p>
-                   <div className="flex flex-wrap justify-center gap-4">
-                     {recentQueries.map((q, idx) => (
-                       <button 
-                         key={idx} 
-                         className="neo-btn rounded-full px-6 py-3 font-semibold text-stone-700"
-                         onClick={() => {
-                           setNiche(q.query);
-                           setCurrentNiche(q.query);
-                           fetchDashboard(q.query);
-                         }}
-                       >
-                         {q.query}
-                       </button>
-                     ))}
-                   </div>
-                 </div>
               )}
             </div>
           )}
-          </>
-        )}
 
-        {/* Dashboards View */}
-        {activeView === 'dashboards' && (
-          <div className="animate-in fade-in duration-500 mt-4 lg:mt-12">
-            <div className="flex items-center gap-4 mb-12 border-b border-white/20 pb-4">
-               <LayoutDashboard className="w-8 h-8 text-blue-500" />
-               <h2 className="text-4xl font-bold tracking-tight text-stone-800">Saved Dashboards</h2>
-            </div>
-            
-            {dashboardsList.length === 0 ? (
-               <div className="text-center py-20 neo-flat rounded-[2rem]">
-                 <p className="text-stone-500 font-medium text-lg">No dashboards generated yet.</p>
-               </div>
-            ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {dashboardsList.map((db, i) => (
-                  <div key={i} className="neo-flat rounded-[2rem] p-8 flex flex-col justify-between group hover:neo-pressed transition-all cursor-pointer"
-                       onClick={() => {
-                         setNiche(db.niche);
-                         setCurrentNiche(db.niche);
-                         fetchDashboard(db.niche);
-                         setActiveView('explore');
-                       }}>
-                    <div>
-                      <h3 className="text-xl font-bold text-stone-800 mb-4 group-hover:text-blue-600 transition-colors">{db.niche}</h3>
-                      <p className="text-stone-500 text-sm font-medium mb-6">Last updated: {new Date(db.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div className="flex justify-between items-center pt-4 border-t border-white/20">
-                      <span className="neo-pressed px-3 py-1.5 rounded-full text-xs font-bold text-emerald-500 uppercase">Active</span>
-                      <ChevronRight className="w-5 h-5 text-stone-400 group-hover:text-stone-800 transition-colors" />
-                    </div>
-                  </div>
-                ))}
+          {/* Queries View */}
+          {activeView === 'queries' && (
+            <div className="animate-in fade-in duration-500 mt-4 lg:mt-12">
+              <div className="flex items-center gap-4 mb-12 border-b border-white/20 pb-4">
+                 <Activity className="w-8 h-8 text-emerald-500" />
+                 <h2 className="text-4xl font-bold tracking-tight text-stone-800">Intelligence Log</h2>
               </div>
-            )}
-            
-          </div>
-        )}
 
-        {/* Queries View */}
-        {activeView === 'queries' && (
-          <div className="animate-in fade-in duration-500 mt-4 lg:mt-12">
-            <div className="flex items-center gap-4 mb-12 border-b border-white/20 pb-4">
-               <Activity className="w-8 h-8 text-emerald-500" />
-               <h2 className="text-4xl font-bold tracking-tight text-stone-800">Query Log</h2>
-            </div>
-
-            <div className="neo-flat rounded-[2rem] p-4 lg:p-8 overflow-hidden">
-               <div className="overflow-x-auto">
-                 <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent border-b-0">
-                        <TableHead className="font-bold text-stone-500 pt-4 pb-2">Query ID</TableHead>
-                        <TableHead className="font-bold text-stone-500 pt-4 pb-2">Niche</TableHead>
-                        <TableHead className="font-bold text-stone-500 pt-4 pb-2">Timestamp</TableHead>
-                        <TableHead className="font-bold text-stone-500 pt-4 pb-2 text-right">Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {queriesList.map((q, i) => (
-                         <TableRow key={i} className="hover:bg-black/5 border-b-0 transition-colors">
-                           <TableCell className="font-mono text-xs text-stone-400 py-4">{q.id.split('-')[0]}</TableCell>
-                           <TableCell className="font-semibold text-stone-700 py-4 max-w-[200px] truncate">{q.query}</TableCell>
-                           <TableCell className="font-mono text-sm text-stone-500 py-4">{new Date(q.created_at).toLocaleString()}</TableCell>
-                           <TableCell className="py-4 flex justify-end">
-                              {q.status === 'completed' && <span className="neo-pressed px-3 py-1 text-xs font-bold rounded-full text-emerald-600 block w-max">Completed</span>}
-                              {q.status === 'failed' && (
-                                <div className="flex flex-col items-end gap-1">
-                                  <span className="neo-pressed px-3 py-1 text-xs font-bold rounded-full text-rose-600 block w-max">Failed</span>
-                                  {q.error_message && <span className="text-[10px] text-rose-400 max-w-[150px] truncate" title={q.error_message}>{q.error_message}</span>}
-                                </div>
-                              )}
-                              {(q.status === 'processing' || q.status === 'pending') && <span className="neo-pressed px-3 py-1 text-xs font-bold rounded-full text-amber-600 block w-max flex items-center gap-2"><RefreshCw className="w-3 h-3 animate-spin"/> Processing</span>}
-                           </TableCell>
-                         </TableRow>
-                      ))}
-                      {queriesList.length === 0 && (
-                        <TableRow className="hover:bg-transparent">
-                          <TableCell colSpan={4} className="text-center py-12 text-stone-500 font-medium">No recorded pipeline queries.</TableCell>
+              <div className="neo-flat rounded-[2rem] p-4 lg:p-8 overflow-hidden">
+                 <div className="overflow-x-auto">
+                   <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent border-b-0">
+                          <TableHead className="font-bold text-stone-500 pt-4 pb-2">Query ID</TableHead>
+                          <TableHead className="font-bold text-stone-500 pt-4 pb-2">Keyword</TableHead>
+                          <TableHead className="font-bold text-stone-500 pt-4 pb-2">Timestamp</TableHead>
+                          <TableHead className="font-bold text-stone-500 pt-4 pb-2 text-right">Status</TableHead>
                         </TableRow>
-                      )}
-                    </TableBody>
-                 </Table>
-               </div>
+                      </TableHeader>
+                      <TableBody>
+                        {queriesList.map((q, i) => (
+                           <TableRow key={i} className="hover:bg-black/5 border-b-0 transition-colors">
+                             <TableCell className="font-mono text-xs text-stone-400 py-4">{q.id.split('-')[0]}</TableCell>
+                             <TableCell className="font-semibold text-stone-700 py-4 max-w-[200px] truncate">{q.query}</TableCell>
+                             <TableCell className="font-mono text-sm text-stone-500 py-4">{new Date(q.created_at).toLocaleString()}</TableCell>
+                             <TableCell className="py-4 flex justify-end">
+                                {q.status === 'completed' && <span className="neo-pressed px-3 py-1 text-xs font-bold rounded-full text-emerald-600 block w-max">Analyzed</span>}
+                                {q.status === 'failed' && (
+                                  <div className="flex flex-col items-end gap-1">
+                                    <span className="neo-pressed px-3 py-1 text-xs font-bold rounded-full text-rose-600 block w-max">Failed</span>
+                                    {q.error_message && <span className="text-[10px] text-rose-400 max-w-[150px] truncate" title={q.error_message}>{q.error_message}</span>}
+                                  </div>
+                                )}
+                                {(q.status === 'processing' || q.status === 'pending') && <span className="neo-pressed px-3 py-1 text-xs font-bold rounded-full text-amber-600 block w-max flex items-center gap-2"><RefreshCw className="w-3 h-3 animate-spin"/> Mining</span>}
+                             </TableCell>
+                           </TableRow>
+                        ))}
+                        {queriesList.length === 0 && (
+                          <TableRow className="hover:bg-transparent">
+                            <TableCell colSpan={4} className="text-center py-12 text-stone-500 font-medium">No recorded pipeline queries.</TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                   </Table>
+                 </div>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         </main>
       </div>
     </div>
   );
 }
-
