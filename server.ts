@@ -3,9 +3,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { createServer as createViteServer } from 'vite';
-import { initDB } from './src/db.js';
+import { initDB } from './src/db.ts';
 import path from 'path';
-import { setupApiRoutes } from './src/api.js';
+import { setupApiRoutes } from './src/api.ts';
 
 async function startServer() {
   const app = express();

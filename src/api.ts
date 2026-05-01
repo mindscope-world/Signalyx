@@ -1,5 +1,5 @@
 import { Express } from 'express';
-import db from './db';
+import db from './db.ts';
 import Groq from "groq-sdk";
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
@@ -47,7 +47,7 @@ export function setupApiRoutes(app: Express) {
     try {
       const apiKey = process.env.GROQ_API_KEY;
       if (!apiKey) {
-         console.warn("GROQ_API_KEY is undefined at query time!");
+        console.warn("GROQ_API_KEY is undefined at query time!");
       }
 
       const { niche } = req.body;
@@ -57,7 +57,7 @@ export function setupApiRoutes(app: Express) {
 
       // Check if we already have insights for this niche recently
       const existingQuery = db.prepare('SELECT * FROM user_queries WHERE query = ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 1').get(niche) as any;
-      
+
       if (existingQuery && existingQuery.status === 'completed') {
         return res.json({ message: "Engine already processed this niche.", data: existingQuery });
       }
@@ -92,9 +92,9 @@ export function setupApiRoutes(app: Express) {
   app.get('/api/dashboard/:niche', (req, res) => {
     try {
       const { niche } = req.params;
-      
+
       const record = db.prepare("SELECT output FROM content_outputs WHERE niche = ? AND type = 'seo_strategy' COLLATE NOCASE ORDER BY created_at DESC LIMIT 1").get(niche) as any;
-      
+
       if (!record) {
         return res.json({});
       }
@@ -108,10 +108,10 @@ export function setupApiRoutes(app: Express) {
       res.status(500).json({ error: err.message });
     }
   });
-  
+
   app.get('/api/recent_niches', (req, res) => {
-      const queries = db.prepare('SELECT DISTINCT query, status, created_at FROM user_queries ORDER BY created_at DESC LIMIT 10').all();
-      res.json(queries);
+    const queries = db.prepare('SELECT DISTINCT query, status, created_at FROM user_queries ORDER BY created_at DESC LIMIT 10').all();
+    res.json(queries);
   });
 
   app.get('/api/queries', (req, res) => {
@@ -146,7 +146,7 @@ export function setupApiRoutes(app: Express) {
       const isComment = contentType === 'Comment';
 
       const platformPrompts: Record<string, string> = {
-        'Website': isComment 
+        'Website': isComment
           ? `Write a thoughtful, SEO-relevant comment for a blog post or article. It should add value, ask a question, or provide a unique perspective. Avoid spammy links.`
           : `Write a long-form, SEO-optimized blog post/article for a website. Include an H1, multiple H2s, a punchy introduction, and a conclusion. Content should be around 800-1000 words.`,
         'Reddit': isComment
@@ -201,7 +201,7 @@ async function processNicheWithAI(niche: string, queryId: string) {
     // Step 1: Scrape live SERP data to ground the LLM in reality
     const { titles, snippets, urls } = await scrapeSERP(niche);
     const scrapedContext = titles.length > 0
-      ? `\n\n--- LIVE SERP DATA FOR "${niche}" ---\nThe following are real, currently-ranking search results scraped live from DuckDuckGo:\n${titles.map((t, i) => `${i+1}. TITLE: ${t}\n   SNIPPET: ${snippets[i] || ''}\n   URL: ${urls[i] || ''}`).join('\n')}\n--- END SERP DATA ---\n`
+      ? `\n\n--- LIVE SERP DATA FOR "${niche}" ---\nThe following are real, currently-ranking search results scraped live from DuckDuckGo:\n${titles.map((t, i) => `${i + 1}. TITLE: ${t}\n   SNIPPET: ${snippets[i] || ''}\n   URL: ${urls[i] || ''}`).join('\n')}\n--- END SERP DATA ---\n`
       : `\n(No live SERP data available. Use your training knowledge to estimate.)\n`;
 
     const prompt = `
@@ -299,7 +299,7 @@ You MUST return exactly valid JSON. Do NOT include markdown blocks. Do NOT inclu
     if (urls.length > 0) {
       parsed.data_sources = titles.map((t, i) => ({ title: t, url: urls[i] || '' })).filter(s => s.url);
     }
-    
+
     // Step 2: Store the massive strategic JSON object directly into content_outputs
     const runInTransaction = db.transaction((data) => {
       const outputId = uuidv4();
