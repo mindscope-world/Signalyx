@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Search, Activity, Target, Zap, LayoutDashboard, BrainCircuit, RefreshCw, BarChart2, Bell, User, Mouse, Facebook, Instagram, Twitter, ChevronDown, ChevronRight, ZapOff, ArrowUpRight, TrendingUp, AlertTriangle, Lightbulb, FileText, Globe } from 'lucide-react';
+import { Search, Activity, Target, Zap, LayoutDashboard, BrainCircuit, RefreshCw, BarChart2, Bell, User, Mouse, Facebook, Instagram, Twitter, ChevronDown, ChevronRight, ZapOff, ArrowUpRight, TrendingUp, AlertTriangle, Lightbulb, FileText, Globe, Link2, Info } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table';
 import { Input } from './components/ui/input';
 
 export default function App() {
-  const [activeView, setActiveView] = useState<'explore' | 'dashboards' | 'queries'>('explore');
+  const [activeView, setActiveView] = useState<'explore' | 'dashboards' | 'queries' | 'create'>('explore');
   const [niche, setNiche] = useState('');
   const [currentNiche, setCurrentNiche] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -12,6 +12,14 @@ export default function App() {
   const [recentQueries, setRecentQueries] = useState<any[]>([]);
   const [dashboardsList, setDashboardsList] = useState<any[]>([]);
   const [queriesList, setQueriesList] = useState<any[]>([]);
+
+  // Create Page State
+  const [createTopic, setCreateTopic] = useState('');
+  const [createPlatform, setCreatePlatform] = useState('Website');
+  const [createContentType, setCreateContentType] = useState<'Post' | 'Comment'>('Post');
+  const [createTone, setCreateTone] = useState('Professional');
+  const [generatedContent, setGeneratedContent] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     fetchRecentQueries();
@@ -120,6 +128,38 @@ export default function App() {
     }
   };
 
+  const handleGenerateContent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createTopic || !createPlatform) return;
+    setIsGenerating(true);
+    setGeneratedContent('');
+
+    try {
+      const res = await fetch('/api/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          topic: createTopic, 
+          platform: createPlatform, 
+          tone: createTone,
+          contentType: createContentType,
+          seoContext: data
+        })
+      });
+      const result = await res.json();
+      if (result.content) {
+        setGeneratedContent(result.content);
+      } else {
+        alert("Content generation failed: " + result.error);
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error generating content.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-neo-bg font-sans text-stone-900 flex overflow-hidden">
       
@@ -131,6 +171,11 @@ export default function App() {
             onClick={() => setActiveView('explore')}
             className={`-rotate-90 whitespace-nowrap font-semibold tracking-wide text-sm px-6 py-2 rounded-full transition-all ${activeView === 'explore' ? 'text-stone-800 neo-btn' : 'text-stone-500 hover:text-stone-800'}`}>
             Explore
+          </button>
+          <button 
+            onClick={() => setActiveView('create')}
+            className={`-rotate-90 whitespace-nowrap font-semibold tracking-wide text-sm px-6 py-2 rounded-full transition-all ${activeView === 'create' ? 'text-stone-800 neo-btn' : 'text-stone-500 hover:text-stone-800'}`}>
+            Create
           </button>
           <button 
             onClick={() => setActiveView('dashboards')}
@@ -226,10 +271,12 @@ export default function App() {
                           <div className="neo-pressed p-4 rounded-xl">
                             <p className="text-sm font-bold text-stone-500 mb-1">Total Volume</p>
                             <p className="text-3xl font-bold text-blue-600">{data.demand_intelligence?.total_search_volume}</p>
+                            <span className="flex items-center gap-1 text-xs text-stone-400 mt-1"><Info className="w-3 h-3"/> AI-estimated</span>
                           </div>
                           <div className="neo-pressed p-4 rounded-xl">
                             <p className="text-sm font-bold text-stone-500 mb-1">Trend</p>
                             <p className="text-3xl font-bold text-emerald-600 flex items-center gap-2">{data.demand_intelligence?.trend} <TrendingUp className="w-6 h-6"/></p>
+                            <span className="flex items-center gap-1 text-xs text-stone-400 mt-1"><Info className="w-3 h-3"/> AI-estimated</span>
                           </div>
                           <div className="col-span-2 neo-pressed p-4 rounded-xl">
                             <p className="text-sm font-bold text-stone-500 mb-2">Demand Stability</p>
@@ -497,7 +544,7 @@ export default function App() {
                      </div>
                   </div>
 
-                  {/* 9 & 10. AI Angle & Final Insight */}
+                   {/* 9 & 10. AI Angle & Final Insight */}
                   <div className="bg-stone-800 rounded-[2rem] p-8 md:p-12 text-white shadow-xl relative overflow-hidden">
                     <div className="absolute -right-20 -top-20 w-64 h-64 bg-amber-500/20 rounded-full blur-3xl pointer-events-none"></div>
                     <div className="grid md:grid-cols-2 gap-12 relative z-10">
@@ -521,8 +568,33 @@ export default function App() {
                     </div>
                   </div>
 
+                  {/* Data Sources */}
+                  {data.data_sources && data.data_sources.length > 0 && (
+                    <div className="neo-flat rounded-[2rem] p-8">
+                      <h3 className="flex items-center gap-3 text-xl font-bold text-stone-600 mb-2">
+                        <Link2 className="text-stone-400 w-5 h-5"/> Data Sources
+                        <span className="text-sm font-normal text-stone-400">— scraped live from DuckDuckGo</span>
+                      </h3>
+                      <p className="text-stone-400 text-sm font-medium mb-6">The analysis above is grounded on these currently-ranking pages. Volume & trend figures are AI-estimated.</p>
+                      <div className="grid md:grid-cols-2 gap-3">
+                        {data.data_sources.map((source: { title: string, url: string }, i: number) => (
+                          <a key={i} href={source.url} target="_blank" rel="noopener noreferrer"
+                             className="flex items-start gap-3 bg-white/60 p-4 rounded-xl border border-stone-100 hover:border-blue-300 hover:shadow-md transition-all group">
+                            <span className="w-6 h-6 shrink-0 rounded-full bg-stone-100 text-stone-500 text-xs font-bold flex items-center justify-center mt-0.5 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">{i+1}</span>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-stone-800 text-sm leading-tight mb-1 group-hover:text-blue-700 transition-colors line-clamp-2">{source.title}</p>
+                              <p className="font-mono text-xs text-stone-400 truncate">{source.url}</p>
+                            </div>
+                            <ArrowUpRight className="w-4 h-4 shrink-0 text-stone-300 group-hover:text-blue-500 mt-0.5 transition-colors"/>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
               )}
+
               
               {/* Placeholder before query */}
               {!data && !isProcessing && (
@@ -642,6 +714,119 @@ export default function App() {
                       </TableBody>
                    </Table>
                  </div>
+              </div>
+            </div>
+          )}
+
+          {/* Create View */}
+          {activeView === 'create' && (
+            <div className="animate-in fade-in duration-500 mt-4 lg:mt-12 max-w-4xl mx-auto">
+              <div className="flex items-center gap-4 mb-12 border-b border-white/20 pb-4">
+                 <Zap className="w-8 h-8 text-amber-500" />
+                 <h2 className="text-4xl font-bold tracking-tight text-stone-800">Content Engine</h2>
+              </div>
+
+              <div className="grid gap-8">
+                <div className="neo-flat rounded-[2rem] p-8">
+                  <form onSubmit={handleGenerateContent} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-stone-500 uppercase tracking-widest ml-2">Topic or Keyword</label>
+                      <div className="neo-pressed rounded-2xl px-6 py-4">
+                        <Input 
+                          placeholder="e.g. Benefits of Keto for Weight Loss" 
+                          className="border-none shadow-none bg-transparent focus-visible:ring-0 text-lg h-auto py-0 text-stone-800 placeholder:text-stone-400 font-bold"
+                          value={createTopic}
+                          onChange={(e) => setCreateTopic(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-stone-500 uppercase tracking-widest ml-2">Platform</label>
+                        <select 
+                          className="w-full neo-pressed rounded-2xl px-6 py-4 bg-transparent outline-none font-bold text-stone-800 appearance-none"
+                          value={createPlatform}
+                          onChange={(e) => setCreatePlatform(e.target.value)}
+                        >
+                          <option>Website</option>
+                          <option>Reddit</option>
+                          <option>X</option>
+                          <option>LinkedIn</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-stone-500 uppercase tracking-widest ml-2">Format</label>
+                        <div className="flex neo-pressed rounded-2xl p-1 h-[60px]">
+                           <button 
+                             type="button"
+                             onClick={() => setCreateContentType('Post')}
+                             className={`flex-1 rounded-xl font-bold transition-all ${createContentType === 'Post' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-400 hover:text-stone-600'}`}
+                           >Post</button>
+                           <button 
+                             type="button"
+                             onClick={() => setCreateContentType('Comment')}
+                             className={`flex-1 rounded-xl font-bold transition-all ${createContentType === 'Comment' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-400 hover:text-stone-600'}`}
+                           >Comment</button>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-stone-500 uppercase tracking-widest ml-2">Tone</label>
+                        <select 
+                          className="w-full neo-pressed rounded-2xl px-6 py-4 bg-transparent outline-none font-bold text-stone-800 appearance-none"
+                          value={createTone}
+                          onChange={(e) => setCreateTone(e.target.value)}
+                        >
+                          <option>Professional</option>
+                          <option>Casual</option>
+                          <option>Viral</option>
+                          <option>Educational</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {data && (
+                      <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 flex items-center gap-3">
+                        <BrainCircuit className="w-5 h-5 text-emerald-500" />
+                        <p className="text-sm font-medium text-emerald-800">
+                          <strong>Active Intelligence:</strong> Generating content with live SEO insights from "{currentNiche}".
+                        </p>
+                      </div>
+                    )}
+
+                    <button 
+                      type="submit" 
+                      disabled={isGenerating || !createTopic}
+                      className="w-full neo-btn rounded-2xl py-5 font-black text-xl text-stone-800 flex items-center justify-center gap-3 transition-all hover:scale-[1.01] active:scale-[0.99] group overflow-hidden relative"
+                    >
+                      {isGenerating ? (
+                        <><RefreshCw className="w-6 h-6 animate-spin" /> Weaving Content...</>
+                      ) : (
+                        <><Zap className="w-6 h-6 text-amber-500 group-hover:scale-125 transition-transform" /> Generate Optimized Content</>
+                      )}
+                    </button>
+                  </form>
+                </div>
+
+                {generatedContent && (
+                  <div className="neo-flat rounded-[2rem] p-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex items-center justify-between mb-8">
+                       <h3 className="text-2xl font-bold text-stone-800">Review Output</h3>
+                       <button 
+                         onClick={() => {
+                           navigator.clipboard.writeText(generatedContent);
+                           alert("Copied to clipboard!");
+                         }}
+                         className="neo-btn px-6 py-2 rounded-xl text-sm font-bold text-stone-700 flex items-center gap-2 group"
+                       >
+                         <FileText className="w-4 h-4 text-stone-400 group-hover:text-stone-800" /> Copy Markdown
+                       </button>
+                    </div>
+                    <div className="prose prose-stone max-w-none neo-pressed p-8 rounded-3xl bg-white/50 whitespace-pre-wrap font-medium leading-relaxed text-stone-800">
+                      {generatedContent}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

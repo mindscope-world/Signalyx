@@ -8,6 +8,8 @@ Signalyx is an AI-powered SEO intelligence platform that transforms a single key
 
 Most SEO tools show you data. **Signalyx tells you what to do next.** 
 
+![Signalyx Actionable SEO Intelligence Engine - Automated Test Run](/home/mindscope/.gemini/antigravity/brain/9e4f7417-1ed1-4547-bea7-af3e12bfb8c7/seo_dashboard_test_1777476267042.webp)
+
 Rather than overwhelming you with spreadsheets, Signalyx acts as a unified demand intelligence layer for search-driven growth, instantly turning raw search behavior into business decisions.
 
 ## Feature Modules
