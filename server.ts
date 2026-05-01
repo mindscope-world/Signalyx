@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { createServer as createViteServer } from 'vite';
-import { initDB } from './src/db';
+// import { initDB } from './src/db';
+import { initDB } from './src/db.js';
 import path from 'path';
 import { setupApiRoutes } from './src/api';
 
