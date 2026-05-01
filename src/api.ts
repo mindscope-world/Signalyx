@@ -1,5 +1,5 @@
 import { Express } from 'express';
-import db from './db.ts';
+import db from './db.js';
 import Groq from "groq-sdk";
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
