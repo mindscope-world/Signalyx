@@ -7,37 +7,53 @@ import * as fs from 'fs';
 // Live SERP scraper using DuckDuckGo HTML endpoint (no API key needed)
 async function scrapeSERP(keyword: string): Promise<{ titles: string[], snippets: string[], urls: string[] }> {
   try {
-    const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(keyword)}`;
+    // We prioritize Lite version as it's cleaner and often less protected than the HTML/Main versions
+    const url = `https://duckduckgo.com/lite/?q=${encodeURIComponent(keyword)}`;
+    
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
       }
     });
+
     if (!response.ok) throw new Error(`SERP fetch failed: ${response.status}`);
     const html = await response.text();
-    // Extract titles
-    const titleMatches = [...html.matchAll(/<a[^>]+class="result__a"[^>]*>(.*?)<\/a>/gs)];
-    // Extract snippets
-    const snippetMatches = [...html.matchAll(/<a[^>]+class="result__snippet"[^>]*>(.*?)<\/a>/gs)];
-    // Extract real result URLs from result__url spans
-    const urlMatches = [...html.matchAll(/<a[^>]+class="result__a"[^>]+href="([^"]+)"/g)];
 
-    const titles = titleMatches.slice(0, 10).map(m => m[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim());
-    const snippets = snippetMatches.slice(0, 10).map(m => m[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim());
-    // DDG redirect URLs – extract the real URL from the uddg param
-    const urls = urlMatches.slice(0, 10).map(m => {
-      try {
-        const uddg = new URL(m[1]).searchParams.get('uddg');
-        return uddg ? decodeURIComponent(uddg) : m[1];
-      } catch { return m[1]; }
-    });
+    const titles: string[] = [];
+    const snippets: string[] = [];
+    const urls: string[] = [];
+
+    // Lite Version parsing
+    // Titles and URLs are in <a class="result-link" href="...">Title</a>
+    const titleRegex = /<a class="result-link" href="([^"]+)">([^<]+)<\/a>/g;
+    // Snippets are in <td class="result-snippet">Snippet</td>
+    const snippetRegex = /<td class="result-snippet">([^<]+)<\/td>/g;
+
+    let match;
+    while ((match = titleRegex.exec(html)) !== null && titles.length < 10) {
+      urls.push(match[1]);
+      titles.push(match[2].trim());
+    }
+
+    while ((match = snippetRegex.exec(html)) !== null && snippets.length < 10) {
+      snippets.push(match[1].trim());
+    }
+
+    if (titles.length === 0) {
+        console.warn(`[SERP] No results found in Lite version for: ${keyword}. Checking for anomaly detection...`);
+        if (html.includes('anomaly-modal')) {
+            throw new Error("DuckDuckGo triggered bot protection (Anomaly Modal)");
+        }
+    }
 
     console.log(`[SERP] Scraped ${titles.length} results for: ${keyword}`);
     return { titles, snippets, urls };
   } catch (err: any) {
-    console.warn(`[SERP] Scrape failed (${err.message}), proceeding without live data.`);
+    console.warn(`[SERP] Scrape failed (${err.message}). Grounding with LLM synthesis.`);
     return { titles: [], snippets: [], urls: [] };
   }
 }
@@ -55,10 +71,11 @@ export function setupApiRoutes(app: Express) {
         return res.status(400).json({ error: "niche is required" });
       }
 
-      // Check if we already have insights for this niche recently
+      // Check if we already have insights AND the final strategy output for this niche
+      const existingOutput = db.prepare("SELECT 1 FROM content_outputs WHERE niche = ? AND type = 'seo_strategy' COLLATE NOCASE LIMIT 1").get(niche);
       const existingQuery = db.prepare('SELECT * FROM user_queries WHERE query = ? COLLATE NOCASE ORDER BY created_at DESC LIMIT 1').get(niche) as any;
 
-      if (existingQuery && existingQuery.status === 'completed') {
+      if (existingQuery && existingQuery.status === 'completed' && existingOutput) {
         return res.json({ message: "Engine already processed this niche.", data: existingQuery });
       }
 
@@ -198,24 +215,55 @@ async function processNicheWithAI(niche: string, queryId: string) {
     if (!apiKey) throw new Error("GROQ_API_KEY is not set.");
     const groq = new Groq({ apiKey });
 
-    // Step 1: Scrape live SERP data to ground the LLM in reality
+    // Step 1: Scrape live SERP data to ground the LLM in search reality
     const { titles, snippets, urls } = await scrapeSERP(niche);
+    
+    // Step 2: SIOS Module A - AI Citation Simulation
+    // We simulate an LLM's response to see which brands are cited for this niche
+    const aiSimulationResponse = await groq.chat.completions.create({
+      messages: [
+        { 
+          role: "system", 
+          content: "You are the SIOS AI Simulator. Identify exactly which brand names and websites are most frequently cited or recommended by generative AI for the given niche. Return a concise list of cited brands and a brief sentiment analysis for each." 
+        },
+        { role: "user", content: `Niche: ${niche}` }
+      ],
+      model: "llama-3.3-70b-versatile",
+    });
+    const aiCitations = aiSimulationResponse.choices[0]?.message?.content || "No AI citation data available.";
+    
+    // Step 3: SIOS Module B - GEO Retrieval Simulation
+    // We simulate a RAG (Retrieval-Augmented Generation) process to predict pickup likelihood
+    const geoSimulationResponse = await groq.chat.completions.create({
+      messages: [
+        { 
+          role: "system", 
+          content: "You are the SIOS GEO Engine. Analyze the relationship between the user query and the likely top-ranking content. Assess: 1. Information Density 2. Answer-Engine Compatibility 3. Semantic Relevance. Predict how likely this niche's content is to be 'picked up' as a source for an AI search summary (0-100%)." 
+        },
+        { role: "user", content: `Query Context: ${niche}\nScraped Signals: ${titles.join(', ')}` }
+      ],
+      model: "llama-3.3-70b-versatile",
+    });
+    const geoSimulation = geoSimulationResponse.choices[0]?.message?.content || "GEO simulation unavailable.";
+
     const scrapedContext = titles.length > 0
-      ? `\n\n--- LIVE SERP DATA FOR "${niche}" ---\nThe following are real, currently-ranking search results scraped live from DuckDuckGo:\n${titles.map((t, i) => `${i + 1}. TITLE: ${t}\n   SNIPPET: ${snippets[i] || ''}\n   URL: ${urls[i] || ''}`).join('\n')}\n--- END SERP DATA ---\n`
-      : `\n(No live SERP data available. Use your training knowledge to estimate.)\n`;
+      ? `\n\n--- LIVE SEARCH & SIOS DATA FOR "${niche}" ---\n
+SEARCH DATA (SERP):\n${titles.map((t, i) => `${i + 1}. TITLE: ${t}\n   URL: ${urls[i] || ''}`).join('\n')}\n
+AI CITATIONS (SIOS Module A):\n${aiCitations}\n
+GEO SIMULATION (SIOS Module B):\n${geoSimulation}\n
+--- END LIVE DATA ---\n`
+      : `\n(No live signals available. Use your training knowledge for Synthesis Mode.)\n`;
 
     const prompt = `
 You are Signalyx, an AI-powered SEO Intelligence Engine. The user has queried the keyword: "${niche}".
-You have been provided with LIVE, REAL scraped SERP data from this keyword's current search results.
-Use this real data as the primary source for your analysis — populate the domains, titles and competitive signals from the live data below. Do NOT fabricate generic placeholder data.
-
-IMPORTANT TRANSPARENCY NOTES:
-- For total_search_volume and trend percentages: you CANNOT know these exactly. Provide a CLEARLY ESTIMATED range (e.g. "~500K–1M (estimated)") — do NOT state specific numbers as facts.
-- For top_queries: base these on the real titles/snippets found in the SERP data below, not generic guesses.
-- For top_domains: extract the actual domain names from the scraped URLs provided.
-- The "data_sources" field must contain a JSON array of the scraped URLs from the SERP data (the URL field from each result below).
 ${scrapedContext}
-Based on the live data above, return exactly valid JSON for the following 10-module SEO strategy:
+
+INSTRUCTIONS FOR DATA HANDLING:
+1. IF LIVE SEARCH DATA IS PROVIDED: Use it as the source of truth for "top_domains", "serp_characteristics", and "data_sources".
+2. IF NO LIVE DATA (Synthesis Mode): Brainstorm the most likely dominant domains and competitors based on your vast training set for this specific niche. Mark these as "AI-Estimates".
+3. TRANSPARENCY: For total_search_volume and growth percentages, ALWAYS provide a clearly estimated range (e.g. "~1M–2M (est.)").
+
+Return exactly valid JSON for the following 10-module SEO strategy:
 {
   "demand_intelligence": {
     "total_search_volume": "string (e.g. 1.2M)",
@@ -239,7 +287,17 @@ Based on the live data above, return exactly valid JSON for the following 10-mod
     "top_domains": ["string", "string"],
     "serp_characteristics": ["string", "string"],
     "content_gaps": [ { "gap_area": "string", "opportunity": "High|Medium|Low", "practical_step": "string" } ],
-    "insight": "string"
+    "insight": "string",
+    "ai_visibility_score": 75,
+    "ai_cited_competitors": ["string", "string"],
+    "citation_sentiment": "Positive|Mixed|Neutral",
+    "geo_intelligence": {
+      "geo_score": 82,
+      "geo_pickup_likelihood": "High|Medium|Low",
+      "retrieval_density": "High|Medium|Low",
+      "optimization_tips": ["string", "string"],
+      "insight": "string"
+    }
   },
   "opportunity_scoring": {
     "demand_score": 92,

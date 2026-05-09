@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Activity, Target, Zap, LayoutDashboard, BrainCircuit, RefreshCw, BarChart2, Bell, User, Mouse, Facebook, Instagram, Twitter, ChevronDown, ChevronRight, ZapOff, ArrowUpRight, TrendingUp, AlertTriangle, Lightbulb, FileText, Globe, Link2, Info } from 'lucide-react';
+import { Search, Activity, Target, Zap, LayoutDashboard, BrainCircuit, RefreshCw, BarChart2, Bell, User, Mouse, Facebook, Instagram, Twitter, ChevronDown, ChevronRight, ZapOff, ArrowUpRight, TrendingUp, AlertTriangle, Lightbulb, FileText, Globe, Link2, Info, Flag } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table';
 import { Input } from './components/ui/input';
 
@@ -379,10 +379,48 @@ export default function App() {
                        </div>
                     </div>
 
-                    <div className="lg:col-span-3 neo-flat rounded-[2rem] p-8">
-                       <h3 className="flex items-center gap-3 text-2xl font-bold text-stone-800 mb-8"><Globe className="text-indigo-500"/> 4. Competitive Landscape</h3>
-                       
-                       <div className="grid sm:grid-cols-2 gap-6 mb-8">
+                     <div className="lg:col-span-3 neo-flat rounded-[2rem] p-8">
+                         <div className="flex justify-between items-start mb-8">
+                           <h3 className="flex items-center gap-3 text-2xl font-bold text-stone-800"><Globe className="text-indigo-500"/> 4. Competitive Landscape</h3>
+                           <div className="flex gap-2">
+                             <span className="bg-indigo-600 text-white text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm">SIOS Module A Active</span>
+                             <span className="bg-emerald-600 text-white text-[10px] font-black uppercase tracking-tighter px-2 py-0.5 rounded shadow-sm">SIOS Module B Active</span>
+                           </div>
+                         </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                           {/* SIOS Module A - AI Visibility Score */}
+                           <div className="bg-indigo-950 text-white p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+                              <h4 className="text-[10px] uppercase tracking-widest font-black text-indigo-300">AI Visibility Score</h4>
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-5xl font-black">{data.competitive_landscape?.ai_visibility_score || 0}</span>
+                                <span className="text-indigo-400 font-bold">/100</span>
+                              </div>
+                              <p className="text-[10px] text-indigo-200 leading-tight mt-4">Likelihood of brand citation in Generative AI responses (Perplexity, ChatGPT, Gemini).</p>
+                           </div>
+
+                           {/* AI Citation Sentiment */}
+                           <div className="bg-stone-100 p-6 rounded-2xl border-2 border-stone-800">
+                             <h4 className="text-[10px] uppercase tracking-widest font-black text-stone-500 mb-4">Citation Sentiment</h4>
+                             <div className="flex items-center gap-3">
+                                <div className={`w-3 h-3 rounded-full ${data.competitive_landscape?.citation_sentiment === 'Positive' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]'}`}></div>
+                                <span className="text-2xl font-black text-stone-800">{data.competitive_landscape?.citation_sentiment || 'Neutral'}</span>
+                             </div>
+                             <p className="text-[10px] text-stone-500 leading-tight mt-4 italic">Analysis of contextual brand positioning in AI simulation.</p>
+                           </div>
+
+                           {/* AI-Cited Competitors */}
+                           <div className="bg-white p-6 rounded-2xl border-2 border-dashed border-stone-300">
+                              <h4 className="text-[10px] uppercase tracking-widest font-black text-stone-500 mb-4">AI-Cited Competitors</h4>
+                              <ul className="flex flex-wrap gap-2">
+                                {data.competitive_landscape?.ai_cited_competitors?.map((comp: string, i: number) => (
+                                  <li key={i} className="bg-stone-800 text-white text-[11px] font-bold px-2 py-1 rounded">{comp}</li>
+                                ))}
+                              </ul>
+                           </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 gap-6 mb-8">
                          <div className="neo-pressed p-6 rounded-2xl">
                            <h4 className="font-bold text-stone-500 uppercase text-sm tracking-widest mb-4">Top Domains</h4>
                            <ul className="space-y-2">
@@ -510,36 +548,87 @@ export default function App() {
                          <div className="space-y-8 relative">
                             <div className="absolute left-3.5 top-2 bottom-2 w-0.5 bg-stone-300"></div>
                             
-                            <div className="relative pl-10">
-                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10">1</div>
+                            <div className="relative pl-10 group">
+                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10 group-hover:scale-110 transition-transform">1</div>
                               <h5 className="font-bold text-stone-800 mb-2">Week 1–2: Foundation</h5>
-                              <ul className="space-y-1">
+                              <ul className="space-y-2">
                                 {data.seo_execution_plan?.week_1_2?.map((step: string, i: number) => (
-                                  <li key={i} className="text-stone-600 font-medium">- {step}</li>
+                                  <li key={i} className="flex items-center justify-between gap-4 text-stone-600 font-medium bg-white/40 p-2 rounded-lg border border-transparent hover:border-stone-200 transition-all">
+                                    <span>- {step}</span>
+                                    <button 
+                                      onClick={() => { setCreateTopic(step); setActiveView('create'); }}
+                                      className="text-[10px] font-black uppercase bg-stone-800 text-white px-2 py-1 rounded hover:bg-amber-500 transition-colors"
+                                    >Execute</button>
+                                  </li>
                                 ))}
                               </ul>
                             </div>
 
-                            <div className="relative pl-10">
-                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10">2</div>
+                            <div className="relative pl-10 group">
+                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10 group-hover:scale-110 transition-transform">2</div>
                               <h5 className="font-bold text-stone-800 mb-2">Week 3–4: Linking</h5>
-                              <ul className="space-y-1">
+                              <ul className="space-y-2">
                                 {data.seo_execution_plan?.week_3_4?.map((step: string, i: number) => (
-                                  <li key={i} className="text-stone-600 font-medium">- {step}</li>
+                                  <li key={i} className="flex items-center justify-between gap-4 text-stone-600 font-medium bg-white/40 p-2 rounded-lg border border-transparent hover:border-stone-200 transition-all">
+                                    <span>- {step}</span>
+                                    <button 
+                                      onClick={() => { setCreateTopic(step); setActiveView('create'); }}
+                                      className="text-[10px] font-black uppercase bg-stone-800 text-white px-2 py-1 rounded hover:bg-amber-500 transition-colors"
+                                    >Execute</button>
+                                  </li>
                                 ))}
                               </ul>
                             </div>
 
-                            <div className="relative pl-10">
-                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10">3</div>
+                            <div className="relative pl-10 group">
+                              <div className="absolute left-0 top-1 w-7 h-7 rounded-full bg-stone-800 text-white flex items-center justify-center text-xs font-black z-10 group-hover:scale-110 transition-transform">3</div>
                               <h5 className="font-bold text-stone-800 mb-2">Month 2: Conversion & Authority</h5>
-                              <ul className="space-y-1">
+                              <ul className="space-y-2">
                                 {data.seo_execution_plan?.month_2?.map((step: string, i: number) => (
-                                  <li key={i} className="text-stone-600 font-medium">- {step}</li>
+                                  <li key={i} className="flex items-center justify-between gap-4 text-stone-600 font-medium bg-white/40 p-2 rounded-lg border border-transparent hover:border-stone-200 transition-all">
+                                    <span>- {step}</span>
+                                    <button 
+                                      onClick={() => { setCreateTopic(step); setActiveView('create'); }}
+                                      className="text-[10px] font-black uppercase bg-stone-800 text-white px-2 py-1 rounded hover:bg-amber-500 transition-colors"
+                                    >Execute</button>
+                                  </li>
                                 ))}
                               </ul>
                             </div>
                          </div>
+
+                         {/* SIOS Module B - GEO Intelligence */}
+                         {data.competitive_landscape?.geo_intelligence && (
+                           <div className="bg-emerald-50 border-2 border-emerald-950 rounded-3xl p-8 mb-8 flex flex-col md:flex-row gap-10 items-center">
+                              <div className="flex-shrink-0 relative">
+                                 <div className="w-32 h-32 rounded-full border-8 border-stone-200 flex items-center justify-center">
+                                    <span className="text-4xl font-black text-emerald-900">{data.competitive_landscape.geo_intelligence.geo_score}</span>
+                                 </div>
+                                 <div className="absolute -bottom-2 -right-2 bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg">GEO SCORE</div>
+                              </div>
+                              
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-4">
+                                  <h4 className="text-xs font-black uppercase tracking-widest text-emerald-800">Generative Engine Optimization (GEO)</h4>
+                                  <span className={`px-2 py-0.5 text-[10px] font-black rounded-full uppercase ${
+                                    data.competitive_landscape.geo_intelligence.geo_pickup_likelihood === 'High' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                                  }`}>
+                                    {data.competitive_landscape.geo_intelligence.geo_pickup_likelihood} Pickup Prob.
+                                  </span>
+                                </div>
+                                <p className="text-emerald-950 font-medium text-lg leading-snug mb-6">{data.competitive_landscape.geo_intelligence.insight}</p>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                  {data.competitive_landscape.geo_intelligence.optimization_tips?.map((tip: string, i: number) => (
+                                    <div key={i} className="bg-white/60 p-3 rounded-xl border border-emerald-200 flex items-center gap-3 group hover:bg-white transition-all cursor-pointer" onClick={() => { setCreateTopic(tip); setActiveView('create'); }}>
+                                       <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                       <span className="text-[11px] font-bold text-emerald-900 leading-tight">{tip}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                           </div>
+                         )}
                        </div>
                      </div>
                   </div>
@@ -720,14 +809,20 @@ export default function App() {
 
           {/* Create View */}
           {activeView === 'create' && (
-            <div className="animate-in fade-in duration-500 mt-4 lg:mt-12 max-w-4xl mx-auto">
-              <div className="flex items-center gap-4 mb-12 border-b border-white/20 pb-4">
-                 <Zap className="w-8 h-8 text-amber-500" />
-                 <h2 className="text-4xl font-bold tracking-tight text-stone-800">Content Engine</h2>
+            <div className="animate-in fade-in duration-500 mt-4 lg:mt-12 max-w-6xl mx-auto">
+              <div className="flex items-center justify-between mb-12 border-b border-white/20 pb-4">
+                 <div className="flex items-center gap-4">
+                   <Zap className="w-8 h-8 text-amber-500" />
+                   <h2 className="text-4xl font-bold tracking-tight text-stone-800">Content Engine</h2>
+                 </div>
+                 {data && (
+                    <span className="bg-stone-800 text-white text-[10px] font-black uppercase px-2 py-1 rounded">Strategy Linked</span>
+                 )}
               </div>
 
-              <div className="grid gap-8">
-                <div className="neo-flat rounded-[2rem] p-8">
+              <div className="grid lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:col-span-2 space-y-8">
+                  <div className="neo-flat rounded-[2rem] p-8">
                   <form onSubmit={handleGenerateContent} className="space-y-6">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-stone-500 uppercase tracking-widest ml-2">Topic or Keyword</label>
@@ -824,6 +919,76 @@ export default function App() {
                     </div>
                     <div className="prose prose-stone max-w-none neo-pressed p-8 rounded-3xl bg-white/50 whitespace-pre-wrap font-medium leading-relaxed text-stone-800">
                       {generatedContent}
+                    </div>
+                  </div>
+                )}
+                </div>
+
+                {/* Strategic Roadmap Sidebar */}
+                {data && (
+                  <div className="space-y-6 animate-in slide-in-from-right-4 duration-500">
+                    <div className="neo-flat rounded-[2rem] p-6 border-t-8 border-stone-800 shadow-xl">
+                      <h3 className="text-lg font-black text-stone-800 mb-6 flex items-center gap-2">
+                        <Flag className="w-5 h-5 text-stone-400"/> Strategic Roadmap
+                      </h3>
+                      
+                      <div className="space-y-8">
+                        <div>
+                          <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Weeks 1–2</p>
+                          <ul className="space-y-3">
+                            {data.seo_execution_plan?.week_1_2?.map((step: string, i: number) => (
+                              <li key={i}>
+                                <button 
+                                  onClick={() => setCreateTopic(step)}
+                                  className="w-full text-left bg-stone-100 hover:bg-stone-200 p-3 rounded-xl text-sm font-semibold text-stone-700 transition-colors border border-transparent hover:border-stone-300 group flex items-start gap-2"
+                                >
+                                  <div className="w-4 h-4 mt-0.5 rounded bg-stone-300 group-hover:bg-amber-500 transition-colors"></div>
+                                  {step}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Weeks 3–4</p>
+                          <ul className="space-y-3">
+                            {data.seo_execution_plan?.week_3_4?.map((step: string, i: number) => (
+                              <li key={i}>
+                                <button 
+                                  onClick={() => setCreateTopic(step)}
+                                  className="w-full text-left bg-stone-100 hover:bg-stone-200 p-3 rounded-xl text-sm font-semibold text-stone-700 transition-colors border border-transparent hover:border-stone-300 group flex items-start gap-2"
+                                >
+                                  <div className="w-4 h-4 mt-0.5 rounded bg-stone-300 group-hover:bg-amber-500 transition-colors"></div>
+                                  {step}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Month 2</p>
+                          <ul className="space-y-3">
+                            {data.seo_execution_plan?.month_2?.map((step: string, i: number) => (
+                              <li key={i}>
+                                <button 
+                                  onClick={() => setCreateTopic(step)}
+                                  className="w-full text-left bg-stone-100 hover:bg-stone-200 p-3 rounded-xl text-sm font-semibold text-stone-700 transition-colors border border-transparent hover:border-stone-300 group flex items-start gap-2"
+                                >
+                                  <div className="w-4 h-4 mt-0.5 rounded bg-stone-300 group-hover:bg-amber-500 transition-colors"></div>
+                                  {step}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                       <p className="text-[10px] font-black text-amber-800 uppercase mb-1">Expert Tip:</p>
+                       <p className="text-xs font-medium text-amber-900 leading-tight">Executing tasks in order ensures you build the necessary semantic foundation before scaling conversion content.</p>
                     </div>
                   </div>
                 )}
